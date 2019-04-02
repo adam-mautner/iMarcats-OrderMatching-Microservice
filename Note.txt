@@ -1,0 +1,1 @@
+The jms-jta-implementation branch is not relevant for this project (repo) at least at the moment. The code base for the branch should be empty.
