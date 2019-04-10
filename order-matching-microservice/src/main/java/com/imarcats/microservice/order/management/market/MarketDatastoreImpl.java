@@ -13,7 +13,7 @@ import com.imarcats.internal.server.infrastructure.datastore.MatchedTradeDatasto
 import com.imarcats.internal.server.infrastructure.datastore.OrderDatastore;
 import com.imarcats.internal.server.interfaces.market.MarketInternal;
 import com.imarcats.market.engine.market.MarketImpl;
-import com.imarcats.microservice.order.management.OrderRestController;
+import com.imarcats.microservice.order.management.OrderManagementSystemFactory;
 import com.imarcats.model.Market;
 import com.imarcats.model.types.ActivationStatus;
 import com.imarcats.model.types.PagedMarketList;
@@ -64,7 +64,7 @@ public class MarketDatastoreImpl implements MarketDatastore {
 
 	@Override
 	public PagedMarketList findAllMarketModelsFromCursor(String cursorString, int numberOnPage) {
-		return createPagedMarketList(marketJpaRepository.findAllMarketModelsFromCursor(OrderRestController.createPageable(cursorString, numberOnPage)));
+		return createPagedMarketList(marketJpaRepository.findAllMarketModelsFromCursor(OrderManagementSystemFactory.createPageable(cursorString, numberOnPage)));
 	}
 
 	@Override
@@ -87,17 +87,17 @@ public class MarketDatastoreImpl implements MarketDatastore {
 
 	@Override
 	public PagedMarketList findMarketModelsFromCursorByActivationStatus(ActivationStatus activationStatus, String cursorString, int numberOnPage) {
-		return createPagedMarketList(marketJpaRepository.findMarketModelsFromCursorByActivationStatus(activationStatus, OrderRestController.createPageable(cursorString, numberOnPage)));
+		return createPagedMarketList(marketJpaRepository.findMarketModelsFromCursorByActivationStatus(activationStatus, OrderManagementSystemFactory.createPageable(cursorString, numberOnPage)));
 	}
 
 	@Override
 	public PagedMarketList findMarketModelsFromCursorByInstrument(String instrument, String cursorString, int numberOnPage) {
-		return createPagedMarketList(marketJpaRepository.findMarketModelsFromCursorByInstrument(instrument, OrderRestController.createPageable(cursorString, numberOnPage)));
+		return createPagedMarketList(marketJpaRepository.findMarketModelsFromCursorByInstrument(instrument, OrderManagementSystemFactory.createPageable(cursorString, numberOnPage)));
 	}
 
 	@Override
 	public PagedMarketList findMarketModelsFromCursorByMarketOperator(String marketOperator, String cursorString, int numberOnPage) {
-		return createPagedMarketList(marketJpaRepository.findMarketModelsFromCursorByMarketOperator(marketOperator, OrderRestController.createPageable(cursorString, numberOnPage)));
+		return createPagedMarketList(marketJpaRepository.findMarketModelsFromCursorByMarketOperator(marketOperator, OrderManagementSystemFactory.createPageable(cursorString, numberOnPage)));
 	}
 
 	private PagedMarketList createPagedMarketList(Page<Market> page) {

@@ -7,7 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
 
 import com.imarcats.internal.server.infrastructure.datastore.MatchedTradeDatastore;
-import com.imarcats.microservice.order.management.OrderRestController;
+import com.imarcats.microservice.order.management.OrderManagementSystemFactory;
 import com.imarcats.model.MatchedTrade;
 import com.imarcats.model.TradeSide;
 import com.imarcats.model.types.PagedMatchedTradeSideList;
@@ -43,12 +43,12 @@ public class MatchedTradeDatastoreImpl implements MatchedTradeDatastore {
 
 	@Override
 	public PagedMatchedTradeSideList findMatchedTradeByUser(String userID_, String cursorString_, int maxNumberOfMatchedTradeSidesOnPage_) {
-		return createPagedTradeSideList(tradeJpaRepository.findMatchedTradeByUser(userID_, OrderRestController.createPageable(cursorString_, maxNumberOfMatchedTradeSidesOnPage_)));
+		return createPagedTradeSideList(tradeJpaRepository.findMatchedTradeByUser(userID_, OrderManagementSystemFactory.createPageable(cursorString_, maxNumberOfMatchedTradeSidesOnPage_)));
 	}
 
 	@Override
 	public PagedMatchedTradeSideList findMatchedTradeByUserAndMarket(String userID_, String marketCode_, String cursorString_, int maxNumberOfMatchedTradeSidesOnPage_) {
-		return createPagedTradeSideList(tradeJpaRepository.findMatchedTradeByUserAndMarket(userID_, marketCode_, OrderRestController.createPageable(cursorString_, maxNumberOfMatchedTradeSidesOnPage_)));	
+		return createPagedTradeSideList(tradeJpaRepository.findMatchedTradeByUserAndMarket(userID_, marketCode_, OrderManagementSystemFactory.createPageable(cursorString_, maxNumberOfMatchedTradeSidesOnPage_)));	
 	}
 
 	@Override

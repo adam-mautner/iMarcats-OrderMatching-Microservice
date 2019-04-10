@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
 import com.imarcats.internal.server.infrastructure.datastore.OrderDatastore;
 import com.imarcats.internal.server.interfaces.order.OrderInternal;
 import com.imarcats.market.engine.order.OrderImpl;
-import com.imarcats.microservice.order.management.OrderRestController;
+import com.imarcats.microservice.order.management.OrderManagementSystemFactory;
 import com.imarcats.microservice.order.management.market.MarketDatastoreImpl;
 import com.imarcats.model.Order;
 import com.imarcats.model.types.PagedOrderList;
@@ -60,7 +60,7 @@ public class OrderDatastoreImpl implements OrderDatastore {
 
 	@Override
 	public PagedOrderList findActiveOrdersFromCursorBy(String userID_, String cursorString_, int maxNumberOfOrderOnPage_) {
-		return createPagedOrderList(orderJpaRepository.findActiveOrdersFromCursorBy(userID_, OrderRestController.createPageable(cursorString_, maxNumberOfOrderOnPage_)));
+		return createPagedOrderList(orderJpaRepository.findActiveOrdersFromCursorBy(userID_, OrderManagementSystemFactory.createPageable(cursorString_, maxNumberOfOrderOnPage_)));
 	}
 
 	@Override
@@ -94,12 +94,12 @@ public class OrderDatastoreImpl implements OrderDatastore {
 
 	@Override
 	public PagedOrderList findOrdersFromCursorBy(String userID_, String cursorString_, int maxNumberOfOrderOnPage_) {
-		return createPagedOrderList(orderJpaRepository.findOrdersFromCursorBy(userID_, OrderRestController.createPageable(cursorString_, maxNumberOfOrderOnPage_)));
+		return createPagedOrderList(orderJpaRepository.findOrdersFromCursorBy(userID_, OrderManagementSystemFactory.createPageable(cursorString_, maxNumberOfOrderOnPage_)));
 	}
 
 	@Override
 	public PagedOrderList findOrdersFromCursorBy(String userID_, String marketCode_, String cursorString_, int maxNumberOfOrderOnPage_) {
-		return createPagedOrderList(orderJpaRepository.findOrdersFromCursorBy(userID_, marketCode_, OrderRestController.createPageable(cursorString_, maxNumberOfOrderOnPage_)));
+		return createPagedOrderList(orderJpaRepository.findOrdersFromCursorBy(userID_, marketCode_, OrderManagementSystemFactory.createPageable(cursorString_, maxNumberOfOrderOnPage_)));
 	}
 
 	private OrderInternal[] toOrderInternalArray(List<Order> orders) {
