@@ -1,11 +1,12 @@
 package com.imarcats.microservice.order.management.market;
 
+import java.util.HashMap;
 import java.util.List;
-import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
 
 import com.imarcats.internal.server.infrastructure.datastore.MarketDatastore;
@@ -13,23 +14,15 @@ import com.imarcats.internal.server.infrastructure.datastore.MatchedTradeDatasto
 import com.imarcats.internal.server.infrastructure.datastore.OrderDatastore;
 import com.imarcats.internal.server.interfaces.market.MarketInternal;
 import com.imarcats.market.engine.market.MarketImpl;
-import com.imarcats.microservice.order.management.OrderRestController;
 import com.imarcats.model.Market;
 import com.imarcats.model.types.ActivationStatus;
 import com.imarcats.model.types.PagedMarketList;
 
-// TODO: This is a duplicated code, we either have to put it to common lib or better separate the market data model to 
-// 		 - Live Market object (used by order management and order mathcing)
-//		 - Market static data (used by market management)
-// 		 We also need DB level separation 
 @Component("MarketDatastoreImpl")
 public class MarketDatastoreImpl implements MarketDatastore {
 
-	@Autowired
-	private MarketCrudRepository marketCrudRepository;
-	
-	@Autowired
-	private MarketJpaRepository marketJpaRepository;
+
+	private HashMap<String, Market> markets = new HashMap<String, Market>();
 	
 	@Autowired
 	@Qualifier("MatchedTradeDatastoreImpl")
@@ -40,18 +33,17 @@ public class MarketDatastoreImpl implements MarketDatastore {
 	
 	@Override
 	public String createMarket(Market market) {
-		return marketCrudRepository.save(market).getCode();
+		return markets.put(market.getMarketCode(), market).getMarketCode();
 	}
 
 	@Override
 	public void deleteMarket(String code) {
-		marketCrudRepository.deleteById(code);
+		markets.remove(code);
 	}
 
 	@Override
 	public MarketInternal findMarketBy(String code) {
-		Optional<Market> byId = marketCrudRepository.findById(code);
-		Market market = byId.orElse(null); 
+		Market market = markets.get(code);
 		// TODO: Fix this, we should replace the datastores with implementation that call web service instead of database access
 		// 		 the best would be to have access to these datastores here at all 
 		return market != null ? new MarketImpl(market, null, orderDatastore, this, null, tradeDatastore): null; 
@@ -59,56 +51,66 @@ public class MarketDatastoreImpl implements MarketDatastore {
 	
 	@Override
 	public Market updateMarket(Market changedMarket) {
-		return marketCrudRepository.save(changedMarket);
+		return markets.put(changedMarket.getMarketCode(), changedMarket);
 	}
 
 	@Override
 	public PagedMarketList findAllMarketModelsFromCursor(String cursorString, int numberOnPage) {
-		return createPagedMarketList(marketJpaRepository.findAllMarketModelsFromCursor(OrderRestController.createPageable(cursorString, numberOnPage)));
+		return createPagedMarketList(markets.values().stream().collect(Collectors.toList()), cursorString, numberOnPage);
 	}
 
 	@Override
 	public Market[] findMarketModelsByBusinessEntity(String businessEntity) {
-		List<Market> market = marketJpaRepository.findMarketModelsByBusinessEntity(businessEntity);
-		return market.toArray(new Market[market.size()]);
+		return markets.values().stream().filter(market -> market.getBusinessEntityCode().equals(businessEntity)).toArray(size -> new Market[size]);
 	}
 
 	@Override
 	public Market[] findMarketModelsByInstrument(String instrument) {
-		List<Market> market = marketJpaRepository.findMarketModelsByInstrument(instrument);
-		return market.toArray(new Market[market.size()]);
+		return findMarketModelsByInstrumentStream(instrument).toArray(size -> new Market[size]);
+	}
+
+	private Stream<Market> findMarketModelsByInstrumentStream(String instrument) {
+		return markets.values().stream().filter(market -> market.getInstrumentCode().equals(instrument));
 	}
 
 	@Override
 	public Market[] findMarketModelsByMarketOperator(String marketOperator) {
-		List<Market> market = marketJpaRepository.findMarketModelsByMarketOperator(marketOperator);
-		return market.toArray(new Market[market.size()]);
+		return findMarketModelsByMarketOperatorStream(marketOperator).toArray(size -> new Market[size]);
+	}
+
+	private Stream<Market> findMarketModelsByMarketOperatorStream(String marketOperator) {
+		return markets.values().stream().filter(market -> market.getMarketOperatorCode().equals(marketOperator));
 	}
 
 	@Override
 	public PagedMarketList findMarketModelsFromCursorByActivationStatus(ActivationStatus activationStatus, String cursorString, int numberOnPage) {
-		return createPagedMarketList(marketJpaRepository.findMarketModelsFromCursorByActivationStatus(activationStatus, OrderRestController.createPageable(cursorString, numberOnPage)));
+		return createPagedMarketList(markets.values().stream().filter(markets -> markets.getActivationStatus() == activationStatus).collect(Collectors.toList()), cursorString, numberOnPage);
 	}
 
 	@Override
 	public PagedMarketList findMarketModelsFromCursorByInstrument(String instrument, String cursorString, int numberOnPage) {
-		return createPagedMarketList(marketJpaRepository.findMarketModelsFromCursorByInstrument(instrument, OrderRestController.createPageable(cursorString, numberOnPage)));
+		return createPagedMarketList(findMarketModelsByInstrumentStream(instrument).collect(Collectors.toList()), cursorString, numberOnPage);
 	}
 
 	@Override
 	public PagedMarketList findMarketModelsFromCursorByMarketOperator(String marketOperator, String cursorString, int numberOnPage) {
-		return createPagedMarketList(marketJpaRepository.findMarketModelsFromCursorByMarketOperator(marketOperator, OrderRestController.createPageable(cursorString, numberOnPage)));
+		return createPagedMarketList(findMarketModelsByMarketOperatorStream(marketOperator).collect(Collectors.toList()), cursorString, numberOnPage);
 	}
 
-	private PagedMarketList createPagedMarketList(Page<Market> page) {
+	private PagedMarketList createPagedMarketList(List<Market> markets, String cursorString_, int maxNumberOfMatchedTradeSidesOnPage_) {
+		int start = Integer.parseInt(cursorString_); 
+		int end = (start + maxNumberOfMatchedTradeSidesOnPage_) > markets.size() ? markets.size() : (start + maxNumberOfMatchedTradeSidesOnPage_);
+		
+		List<Market> sublist = markets.subList(start, end);
+		
 		PagedMarketList list = new PagedMarketList();
-		list.setMarkets(page.getContent().toArray(new Market[page.getContent().size()]));
-		list.setCursorString(""+(page.getNumber() + 1));
-		list.setMaxNumberOfMarketsOnPage(page.getNumberOfElements());
+		list.setMarkets(sublist.toArray(new Market[sublist.size()]));
+		list.setCursorString(""+(end + 1));
+		list.setMaxNumberOfMarketsOnPage(sublist.size());
 		 
 		return list;
 	}
-
+	
 	public OrderDatastore getOrderDatastore() {
 		return orderDatastore;
 	}
