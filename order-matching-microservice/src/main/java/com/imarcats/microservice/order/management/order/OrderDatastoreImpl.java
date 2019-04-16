@@ -14,12 +14,13 @@ import com.imarcats.internal.server.interfaces.order.OrderInternal;
 import com.imarcats.market.engine.order.OrderImpl;
 import com.imarcats.microservice.order.management.market.MarketDatastoreImpl;
 import com.imarcats.model.Order;
+import com.imarcats.model.types.OrderState;
 import com.imarcats.model.types.PagedOrderList;
 
 @Component("OrderDatastoreImpl")
 public class OrderDatastoreImpl implements OrderDatastore {
 
-	private static final List<String> ACTIVE_ORDER_STATE = Arrays.asList("PendingSubmit", "WaitingSubmit", "Submitted");
+	private static final List<OrderState> ACTIVE_ORDER_STATE = Arrays.asList(OrderState.PendingSubmit, OrderState.WaitingSubmit, OrderState.Submitted);
 	
 	private HashMap<Long, Order> orders = new HashMap<Long, Order>();
 	private AtomicLong transactionId = new AtomicLong();
