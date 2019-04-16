@@ -20,7 +20,7 @@ import com.imarcats.model.types.PagedOrderList;
 @Component("OrderDatastoreImpl")
 public class OrderDatastoreImpl implements OrderDatastore {
 
-	private static final List<OrderState> ACTIVE_ORDER_STATE = Arrays.asList(OrderState.PendingSubmit, OrderState.WaitingSubmit, OrderState.Submitted);
+	private static final List<OrderState> ACTIVE_ORDER_STATES = Arrays.asList(OrderState.PendingSubmit, OrderState.WaitingSubmit, OrderState.Submitted);
 	
 	private HashMap<Long, Order> orders = new HashMap<Long, Order>();
 	private AtomicLong transactionId = new AtomicLong();
@@ -70,10 +70,10 @@ public class OrderDatastoreImpl implements OrderDatastore {
 	}
 
 	private Stream<Order> findActiveOrders() {
-		return orders.values().stream().filter(order -> ACTIVE_ORDER_STATE.contains(order.getState()));
+		return orders.values().stream().filter(order -> ACTIVE_ORDER_STATES.contains(order.getState()));
 	}
 	private Stream<Order> findNoActiveOrders() {
-		return orders.values().stream().filter(order -> !ACTIVE_ORDER_STATE.contains(order.getState()));
+		return orders.values().stream().filter(order -> !ACTIVE_ORDER_STATES.contains(order.getState()));
 	}
 
 	@Override
