@@ -7,9 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
-
 import org.springframework.stereotype.Component;
-
 import com.imarcats.internal.server.infrastructure.datastore.MatchedTradeDatastore;
 import com.imarcats.model.MatchedTrade;
 import com.imarcats.model.TradeSide;

@@ -7,7 +7,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.annotation.PartitionOffset;
 import org.springframework.kafka.annotation.TopicPartition;
-import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -24,6 +23,10 @@ import com.imarcats.market.engine.matching.OrderSubmitActionExecutor;
 @Component
 public class OrderActionExecutor {
 
+	// We have to set the topic to the one we set up for Kafka Docker - I know,
+	// hardcoded topic - again :)
+	public static final String IMARCATS_ORDER_QUEUE = "imarcats_order_q";
+	
 	private OrderSubmitActionExecutor orderSubmitActionExecutor;
 	private OrderCancelActionExecutor orderCancelActionExecutor;
 
@@ -44,7 +47,7 @@ public class OrderActionExecutor {
 		orderCancelActionExecutor = new OrderCancelActionExecutor(marketDatastore, orderDatastore);
 	}
 
-	@KafkaListener(topicPartitions = @TopicPartition(topic = OrderActionRequestor.IMARCATS_ORDER_QUEUE, partitionOffsets = {
+	@KafkaListener(topicPartitions = @TopicPartition(topic = IMARCATS_ORDER_QUEUE, partitionOffsets = {
 			@PartitionOffset(partition = "0", initialOffset = "0") }))
 	@Transactional
 	public void listenToOrderActionQueueParition(@Payload OrderActionMessage message,
