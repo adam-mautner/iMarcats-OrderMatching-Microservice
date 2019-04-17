@@ -1,4 +1,4 @@
-package com.imarcats.microservice.order.management.order;
+package com.imarcats.microservice.order.management;
 
 import javax.annotation.PostConstruct;
 
@@ -19,9 +19,15 @@ import com.imarcats.internal.server.interfaces.order.OrderInternal;
 import com.imarcats.internal.server.interfaces.order.OrderManagementContext;
 import com.imarcats.market.engine.matching.OrderCancelActionExecutor;
 import com.imarcats.market.engine.matching.OrderSubmitActionExecutor;
+import com.imarcats.microservice.order.management.market.CreateActiveMarketAction;
+import com.imarcats.microservice.order.management.market.DeleteActiveMarketAction;
+import com.imarcats.microservice.order.management.order.CreateSubmittedOrderAction;
+import com.imarcats.microservice.order.management.order.DeleteSubmittedOrderAction;
+import com.imarcats.microservice.order.management.order.OrderAction;
+import com.imarcats.microservice.order.management.order.OrderActionMessage;
 
 @Component
-public class OrderActionExecutor {
+public class ActionExecutor {
 
 	// We have to set the topic to the one we set up for Kafka Docker - I know,
 	// hardcoded topic - again :)
@@ -29,6 +35,10 @@ public class OrderActionExecutor {
 	
 	private OrderSubmitActionExecutor orderSubmitActionExecutor;
 	private OrderCancelActionExecutor orderCancelActionExecutor;
+	private CreateActiveMarketAction createActiveMarketAction;
+	private DeleteActiveMarketAction deleteActiveMarketAction;
+	private CreateSubmittedOrderAction createSubmittedOrderAction;
+	private DeleteSubmittedOrderAction deleteSubmittedOrderAction;
 
 	@Autowired
 	@Qualifier("MarketDatastoreImpl")
@@ -45,12 +55,18 @@ public class OrderActionExecutor {
 	public void postCreate() {
 		orderSubmitActionExecutor = new OrderSubmitActionExecutor(marketDatastore, orderDatastore);
 		orderCancelActionExecutor = new OrderCancelActionExecutor(marketDatastore, orderDatastore);
+
+		createActiveMarketAction = new CreateActiveMarketAction(marketDatastore);
+		deleteActiveMarketAction = new DeleteActiveMarketAction(marketDatastore);
+
+		createSubmittedOrderAction = new CreateSubmittedOrderAction(orderDatastore);
+		deleteSubmittedOrderAction = new DeleteSubmittedOrderAction(orderDatastore);
 	}
 
 	@KafkaListener(topicPartitions = @TopicPartition(topic = IMARCATS_ORDER_QUEUE, partitionOffsets = {
 			@PartitionOffset(partition = "0", initialOffset = "0") }))
 	@Transactional
-	public void listenToOrderActionQueueParition(@Payload OrderActionMessage message,
+	public void listenToOrderActionQueueParition(@Payload UpdateMessage message,
 			@Header(KafkaHeaders.RECEIVED_PARTITION_ID) int partition, @Header(KafkaHeaders.OFFSET) int offset) {
 
 		// this is needed, because Kafka message arrives faster than the actual change is committed to the datastore (because of the lack of transactions) 
@@ -62,25 +78,36 @@ public class OrderActionExecutor {
 			e1.printStackTrace();
 		}
 		
-		try {
-			if (message.getOrderAction() == OrderAction.Submit) {
-				if (!checkStale(message)) {
-					orderSubmitActionExecutor.submitOrder(message.getOrderKey(), orderManagementContext);
+		if (message.getOrderActionMessage() != null) {				
+			OrderActionMessage orderActionMessage = message.getOrderActionMessage();
+			try {
+				if (orderActionMessage.getOrderAction() == OrderAction.Submit) {
+					if (!checkStale(orderActionMessage)) {
+						orderSubmitActionExecutor.submitOrder(orderActionMessage.getOrderKey(), orderManagementContext);
+					}
+				} else if (orderActionMessage.getOrderAction() == OrderAction.Cancel) {
+					if (!checkStale(orderActionMessage)) {
+						orderCancelActionExecutor.cancelOrder(orderActionMessage.getOrderKey(),
+								orderActionMessage.getCancellationCommentLanguageKey(), orderManagementContext);
+					}
+				} else {
+					// TODO: Add proper logging
+					System.out.println("Unkown action: " + orderActionMessage.getOrderAction());
 				}
-			} else if (message.getOrderAction() == OrderAction.Cancel) {
-				if (!checkStale(message)) {
-					orderCancelActionExecutor.cancelOrder(message.getOrderKey(),
-							message.getCancellationCommentLanguageKey(), orderManagementContext);
-				}
-			} else {
+			} catch (Exception e) {
+				// TODO: handle exception better
 				// TODO: Add proper logging
-				System.out.println("Unkown action: " + message.getOrderAction());
-			}
-		} catch (Exception e) {
-			// TODO: handle exception better
-			// TODO: Add proper logging
-			System.out.println("Error processing order action: " + message.getOrderAction() + " for order: "
-					+ message.getOrderKey() + ", error: " + e);
+				System.out.println("Error processing order action: " + orderActionMessage.getOrderAction() + " for order: "
+						+ orderActionMessage.getOrderKey() + ", error: " + e);
+			} 
+		} else if (message.getCreateSubmittedOrderMessage() != null) {
+			createSubmittedOrderAction.createSubmittedOrder(message.getCreateSubmittedOrderMessage());
+		} else if (message.getDeleteSubmittedOrderMessage() != null) {
+			deleteSubmittedOrderAction.deleteSubmittedOrder(message.getDeleteSubmittedOrderMessage());
+		} else if (message.getCreateActiveMarketMessage() != null) {
+			createActiveMarketAction.createActiveMarket(message.getCreateActiveMarketMessage());
+		} else if (message.getDeleteActiveMarketMessage() != null) {
+			deleteActiveMarketAction.deleteActiveMarket(message.getDeleteActiveMarketMessage());
 		}
 	}
 
