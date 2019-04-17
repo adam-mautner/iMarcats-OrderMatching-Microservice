@@ -1,8 +1,6 @@
 package com.imarcats.microservice.order.management.market;
 
-import com.imarcats.microservice.order.management.UpdateMessage;
-
-public class DeleteActiveMarketMessage extends UpdateMessage {
+public class DeleteActiveMarketMessage {
 
 	private String marketCode;
 

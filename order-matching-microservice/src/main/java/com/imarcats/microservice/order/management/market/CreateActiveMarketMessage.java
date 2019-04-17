@@ -1,9 +1,8 @@
 package com.imarcats.microservice.order.management.market;
 
 import com.imarcats.interfaces.client.v100.dto.MarketDto;
-import com.imarcats.microservice.order.management.UpdateMessage;
 
-public class CreateActiveMarketMessage extends UpdateMessage {
+public class CreateActiveMarketMessage {
 
 	private MarketDto market;
 
