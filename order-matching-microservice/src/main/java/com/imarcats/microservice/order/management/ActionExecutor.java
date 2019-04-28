@@ -128,42 +128,50 @@ public class ActionExecutor implements ConsumerSeekAware {
 	}
 
 	private void processMessage(UpdateMessage message) {
-		if (message.getOrderActionMessage() != null) {				
-			OrderActionMessage orderActionMessage = message.getOrderActionMessage();
-			try {
-				if (orderActionMessage.getOrderAction() == OrderAction.Submit) {
-					if (!checkStale(orderActionMessage)) {
-						orderSubmitActionExecutor.submitOrder(orderActionMessage.getOrderKey(), orderManagementContext);
+		try {
+			if (message.getOrderActionMessage() != null) {				
+				OrderActionMessage orderActionMessage = message.getOrderActionMessage();
+				try {
+					if (orderActionMessage.getOrderAction() == OrderAction.Submit) {
+						if (!checkStale(orderActionMessage)) {
+							orderSubmitActionExecutor.submitOrder(orderActionMessage.getOrderKey(), orderManagementContext);
+						}
+					} else if (orderActionMessage.getOrderAction() == OrderAction.Cancel) {
+						if (!checkStale(orderActionMessage)) {
+							orderCancelActionExecutor.cancelOrder(orderActionMessage.getOrderKey(),
+									orderActionMessage.getCancellationCommentLanguageKey(), orderManagementContext);
+						}
+					} else {
+						// TODO: Add proper logging
+						System.out.println("Unkown action: " + orderActionMessage.getOrderAction());
 					}
-				} else if (orderActionMessage.getOrderAction() == OrderAction.Cancel) {
-					if (!checkStale(orderActionMessage)) {
-						orderCancelActionExecutor.cancelOrder(orderActionMessage.getOrderKey(),
-								orderActionMessage.getCancellationCommentLanguageKey(), orderManagementContext);
-					}
-				} else {
+				} catch (Exception e) {
 					// TODO: Add proper logging
-					System.out.println("Unkown action: " + orderActionMessage.getOrderAction());
-				}
-			} catch (Exception e) {
-				// TODO: handle exception better
-				// TODO: Add proper logging
-				System.out.println("Error processing order action: " + orderActionMessage.getOrderAction() + " for order: "
-						+ orderActionMessage.getOrderKey() + ", error: " + e);
-			} 
-		} else if (message.getCreateSubmittedOrderMessage() != null) {
-			createSubmittedOrderAction.createSubmittedOrder(message.getCreateSubmittedOrderMessage());
-		} else if (message.getDeleteSubmittedOrderMessage() != null) {
-			deleteSubmittedOrderAction.deleteSubmittedOrder(message.getDeleteSubmittedOrderMessage());
-		} else if (message.getCreateActiveMarketMessage() != null) {
-			createActiveMarketAction.createActiveMarket(message.getCreateActiveMarketMessage());
-		} else if (message.getDeleteActiveMarketMessage() != null) {
-			deleteActiveMarketAction.deleteActiveMarket(message.getDeleteActiveMarketMessage());
-		} else if (message.getOpenMarketMessage() != null) {
-			openMarketAction.openMarket(message.getOpenMarketMessage(), orderManagementContext);
-		} else if (message.getCloseMarketMessage() != null) {
-			closeMarketAction.closeMarket(message.getCloseMarketMessage(), orderManagementContext);
-		} else if (message.getCallMarketMessage() != null) {
-			callMarketAction.callMarket(message.getCallMarketMessage(), orderManagementContext);
+					System.out.println("Error processing order action: " + orderActionMessage.getOrderAction() + " for order: "
+							+ orderActionMessage.getOrderKey() + ", error: " + e);
+					throw e;
+				} 
+			} else if (message.getCreateSubmittedOrderMessage() != null) {
+				createSubmittedOrderAction.createSubmittedOrder(message.getCreateSubmittedOrderMessage());
+			} else if (message.getDeleteSubmittedOrderMessage() != null) {
+				deleteSubmittedOrderAction.deleteSubmittedOrder(message.getDeleteSubmittedOrderMessage());
+			} else if (message.getCreateActiveMarketMessage() != null) {
+				createActiveMarketAction.createActiveMarket(message.getCreateActiveMarketMessage());
+			} else if (message.getDeleteActiveMarketMessage() != null) {
+				deleteActiveMarketAction.deleteActiveMarket(message.getDeleteActiveMarketMessage());
+			} else if (message.getOpenMarketMessage() != null) {
+				openMarketAction.openMarket(message.getOpenMarketMessage(), orderManagementContext);
+			} else if (message.getCloseMarketMessage() != null) {
+				closeMarketAction.closeMarket(message.getCloseMarketMessage(), orderManagementContext);
+			} else if (message.getCallMarketMessage() != null) {
+				callMarketAction.callMarket(message.getCallMarketMessage(), orderManagementContext);
+			}
+		} catch (Exception e) {
+			// critical system error - stop system 
+
+			// TODO: Add proper logging
+			System.out.println("Crityical error during processing message: " + e + " - stopping Order Matching system");
+			System.exit(1); 
 		}
 	}
 
