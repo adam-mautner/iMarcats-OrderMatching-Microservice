@@ -1,5 +1,9 @@
 package com.imarcats.microservice.order.management;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+
 import javax.annotation.PostConstruct;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -7,6 +11,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.annotation.PartitionOffset;
 import org.springframework.kafka.annotation.TopicPartition;
+import org.springframework.kafka.listener.ConsumerSeekAware;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -30,12 +35,13 @@ import com.imarcats.microservice.order.management.order.OrderAction;
 import com.imarcats.microservice.order.management.order.OrderActionMessage;
 
 @Component
-public class ActionExecutor {
+public class ActionExecutor implements ConsumerSeekAware {
 
 	// We have to set the topic to the one we set up for Kafka Docker - I know,
 	// hardcoded topic - again :)
 	public static final String IMARCATS_ORDER_QUEUE = "imarcats_order_q";
 	
+	// action executors 
 	private OrderSubmitActionExecutor orderSubmitActionExecutor;
 	private OrderCancelActionExecutor orderCancelActionExecutor;
 	private CreateActiveMarketAction createActiveMarketAction;
@@ -46,6 +52,11 @@ public class ActionExecutor {
 	private CloseMarketAction closeMarketAction;
 	private CallMarketAction callMarketAction;
 
+	// offset management 
+	private final ThreadLocal<ConsumerSeekCallback> seekCallBack = new ThreadLocal<>();
+	private final Map<Integer, Integer> offsetMap = java.util.Collections.synchronizedMap(new HashMap<Integer, Integer>());
+	private CountDownLatch initLatch = new CountDownLatch(1);
+	
 	@Autowired
 	@Qualifier("MarketDatastoreImpl")
 	protected MarketDatastore marketDatastore;
@@ -72,23 +83,51 @@ public class ActionExecutor {
 
 		createSubmittedOrderAction = new CreateSubmittedOrderAction(orderDatastore);
 		deleteSubmittedOrderAction = new DeleteSubmittedOrderAction(orderDatastore);
+		
+		initialize();
 	}
 
+	private void initialize() {
+		// TODO: Initialize in-memory DBs
+		
+		// TODO: Initialize Offset Map
+		
+		initLatch.countDown();
+	}
+	
 	@KafkaListener(topicPartitions = @TopicPartition(topic = IMARCATS_ORDER_QUEUE, partitionOffsets = {
 			@PartitionOffset(partition = "0", initialOffset = "0") }))
 	@Transactional
 	public void listenToOrderActionQueueParition(@Payload UpdateMessage message,
 			@Header(KafkaHeaders.RECEIVED_PARTITION_ID) int partition, @Header(KafkaHeaders.OFFSET) int offset) {
 
-		// this is needed, because Kafka message arrives faster than the actual change is committed to the datastore (because of the lack of transactions) 
-		// TODO: Remove it once the transactions are correct
 		try {
-			Thread.sleep(500);
-		} catch (InterruptedException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
+			// wait for the init 
+			initLatch.await();
+			
+			// check offset for partition 
+			Integer offsetFromMap = offsetMap.get(partition);
+			if(offsetFromMap != null) {
+				int intendedOffset = offsetFromMap + 1;
+				// check, if we should have already consumed the message 
+				if (intendedOffset > offset) {
+					seekCallBack.get().seek(IMARCATS_ORDER_QUEUE, partition, intendedOffset);
+					return;
+				}
+			}
+			
+			processMessage(message);
+			
+			// save the offset for the last successfully processed message 
+			offsetMap.put(partition, offset);
+			
+		} catch (InterruptedException e) {
+			// TODO Log it correctly 
+			e.printStackTrace();
 		}
-		
+	}
+
+	private void processMessage(UpdateMessage message) {
 		if (message.getOrderActionMessage() != null) {				
 			OrderActionMessage orderActionMessage = message.getOrderActionMessage();
 			try {
@@ -150,6 +189,23 @@ public class ActionExecutor {
 		}
 
 		return false;
+	}
+
+	@Override
+	public void registerSeekCallback(ConsumerSeekCallback callback) {
+		seekCallBack.set(callback);
+	}
+
+	@Override
+	public void onPartitionsAssigned(Map<org.apache.kafka.common.TopicPartition, Long> assignments,
+			ConsumerSeekCallback callback) {
+		// do nothing 
+	}
+
+	@Override
+	public void onIdleContainer(Map<org.apache.kafka.common.TopicPartition, Long> assignments,
+			ConsumerSeekCallback callback) {
+		// do nothing
 	}
 
 }
