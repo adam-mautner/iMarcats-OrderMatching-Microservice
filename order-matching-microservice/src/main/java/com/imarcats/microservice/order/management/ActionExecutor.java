@@ -19,8 +19,11 @@ import com.imarcats.internal.server.interfaces.order.OrderInternal;
 import com.imarcats.internal.server.interfaces.order.OrderManagementContext;
 import com.imarcats.market.engine.matching.OrderCancelActionExecutor;
 import com.imarcats.market.engine.matching.OrderSubmitActionExecutor;
+import com.imarcats.microservice.order.management.market.CallMarketAction;
+import com.imarcats.microservice.order.management.market.CloseMarketAction;
 import com.imarcats.microservice.order.management.market.CreateActiveMarketAction;
 import com.imarcats.microservice.order.management.market.DeleteActiveMarketAction;
+import com.imarcats.microservice.order.management.market.OpenMarketAction;
 import com.imarcats.microservice.order.management.order.CreateSubmittedOrderAction;
 import com.imarcats.microservice.order.management.order.DeleteSubmittedOrderAction;
 import com.imarcats.microservice.order.management.order.OrderAction;
@@ -39,6 +42,9 @@ public class ActionExecutor {
 	private DeleteActiveMarketAction deleteActiveMarketAction;
 	private CreateSubmittedOrderAction createSubmittedOrderAction;
 	private DeleteSubmittedOrderAction deleteSubmittedOrderAction;
+	private OpenMarketAction openMarketAction;
+	private CloseMarketAction closeMarketAction;
+	private CallMarketAction callMarketAction;
 
 	@Autowired
 	@Qualifier("MarketDatastoreImpl")
@@ -51,6 +57,7 @@ public class ActionExecutor {
 	@Autowired
 	protected OrderManagementContext orderManagementContext;
 
+
 	@PostConstruct
 	public void postCreate() {
 		orderSubmitActionExecutor = new OrderSubmitActionExecutor(marketDatastore, orderDatastore);
@@ -58,6 +65,10 @@ public class ActionExecutor {
 
 		createActiveMarketAction = new CreateActiveMarketAction(marketDatastore);
 		deleteActiveMarketAction = new DeleteActiveMarketAction(marketDatastore);
+
+		openMarketAction = new OpenMarketAction(marketDatastore);
+		closeMarketAction = new CloseMarketAction(marketDatastore);
+		callMarketAction = new CallMarketAction(marketDatastore);
 
 		createSubmittedOrderAction = new CreateSubmittedOrderAction(orderDatastore);
 		deleteSubmittedOrderAction = new DeleteSubmittedOrderAction(orderDatastore);
@@ -108,6 +119,12 @@ public class ActionExecutor {
 			createActiveMarketAction.createActiveMarket(message.getCreateActiveMarketMessage());
 		} else if (message.getDeleteActiveMarketMessage() != null) {
 			deleteActiveMarketAction.deleteActiveMarket(message.getDeleteActiveMarketMessage());
+		} else if (message.getOpenMarketMessage() != null) {
+			openMarketAction.openMarket(message.getOpenMarketMessage(), orderManagementContext);
+		} else if (message.getCloseMarketMessage() != null) {
+			closeMarketAction.closeMarket(message.getCloseMarketMessage(), orderManagementContext);
+		} else if (message.getCallMarketMessage() != null) {
+			callMarketAction.callMarket(message.getCallMarketMessage(), orderManagementContext);
 		}
 	}
 
