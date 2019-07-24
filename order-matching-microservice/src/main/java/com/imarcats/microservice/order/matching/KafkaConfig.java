@@ -27,7 +27,8 @@ import com.imarcats.microservice.order.matching.notification.TradeActionMessage;
 public class KafkaConfig {
 
 	// I know, I know, but for now we will use hardcoded address here 
-    private String bootstrapAddress = "192.168.99.100:9092"; 
+    // private String bootstrapAddress = "192.168.99.100:9092"; // VirtualBox Docker
+	private String bootstrapAddress = "10.0.75.1:9092"; // Windows Docker
 
     // producers 
 	@Bean

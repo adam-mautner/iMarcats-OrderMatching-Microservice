@@ -170,7 +170,7 @@ public class ActionExecutor implements ConsumerSeekAware {
 			// critical system error - stop system 
 
 			// TODO: Add proper logging
-			System.out.println("Crityical error during processing message: " + e + " - stopping Order Matching system");
+			System.out.println("Critical error during processing message: " + e + " - stopping Order Matching system");
 			System.exit(1); 
 		}
 	}
@@ -182,17 +182,6 @@ public class ActionExecutor implements ConsumerSeekAware {
 			// non-existent order
 			// TODO: Add proper logging
 			System.out.println("Non-existent order: " + message.getOrderKey());
-			return true;
-		}
-		// this serves 2 purposes: 
-		// - provides idempotence for message processing 
-		// - ignores stale messages on restart, but this is not too efficient (better way to store initial offset in DB or in Zookeeper and set it to initial offset above)
-		// Note: We have to check the message version + 1, because it was created before the order was committed (because of lack of transactions)
-		// TODO: Remove it once the transactions are correct 
-		if (order.getOrderModel().getVersionNumber() > message.getVersion() + 1) {
-			// stale order
-			// TODO: Add proper logging
-			System.out.println("Stale order: " + message.getOrderKey() + ", message version: " + message.getVersion() + ", order version: " + order.getOrderModel().getVersionNumber() + 1);
 			return true;
 		}
 

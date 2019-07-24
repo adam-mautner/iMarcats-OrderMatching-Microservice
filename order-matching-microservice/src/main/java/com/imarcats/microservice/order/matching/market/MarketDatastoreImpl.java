@@ -9,14 +9,18 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
+import com.imarcats.internal.server.infrastructure.datastore.InstrumentDatastore;
 import com.imarcats.internal.server.infrastructure.datastore.MarketDatastore;
 import com.imarcats.internal.server.infrastructure.datastore.MatchedTradeDatastore;
 import com.imarcats.internal.server.infrastructure.datastore.OrderDatastore;
 import com.imarcats.internal.server.interfaces.market.MarketInternal;
 import com.imarcats.market.engine.market.MarketImpl;
+import com.imarcats.model.Instrument;
 import com.imarcats.model.Market;
 import com.imarcats.model.types.ActivationStatus;
+import com.imarcats.model.types.PagedInstrumentList;
 import com.imarcats.model.types.PagedMarketList;
+import com.imarcats.model.types.UnderlyingType;
 
 @Component("MarketDatastoreImpl")
 public class MarketDatastoreImpl implements MarketDatastore {
@@ -33,7 +37,8 @@ public class MarketDatastoreImpl implements MarketDatastore {
 	
 	@Override
 	public String createMarket(Market market) {
-		return markets.put(market.getMarketCode(), market).getMarketCode();
+		markets.put(market.getMarketCode(), market);
+		return market.getMarketCode();
 	}
 
 	@Override
@@ -44,9 +49,10 @@ public class MarketDatastoreImpl implements MarketDatastore {
 	@Override
 	public MarketInternal findMarketBy(String code) {
 		Market market = markets.get(code);
+		InstrumentDatastore instrumentDatastore = new ProxyInstrumentDatastore(); 
 		// TODO: Fix this, we should replace the datastores with implementation that call web service instead of database access
 		// 		 the best would be to have access to these datastores here at all 
-		return market != null ? new MarketImpl(market, null, orderDatastore, this, null, tradeDatastore): null; 
+		return market != null ? new MarketImpl(market, null, orderDatastore, this, instrumentDatastore, tradeDatastore): null; 
 	}
 	
 	@Override
@@ -117,5 +123,74 @@ public class MarketDatastoreImpl implements MarketDatastore {
 
 	public void setOrderDatastore(OrderDatastore orderDatastore) {
 		this.orderDatastore = orderDatastore;
+	}
+	
+	// proxy InstrumentDatastore (calls Market Management REST Service)
+	// TODO: Implement correctly
+	private static class ProxyInstrumentDatastore implements InstrumentDatastore {
+
+		@Override
+		public String createInstrument(Instrument instrument_) {
+			// Does nothing
+			return null;
+		}
+
+		@Override
+		public Instrument updateInstrument(Instrument changedInstrumentModel_) {
+			// Does nothing
+			return null;
+		}
+
+		@Override
+		public PagedInstrumentList findInstrumentsFromCursorByActivationStatus(ActivationStatus activationStatus_,
+				String cursorString_, int maxNumberOfInstrumentsOnPage_) {
+			// TODO: Implement with REST service call 
+			return null;
+		}
+
+		@Override
+		public PagedInstrumentList findInstrumentsFromCursorByUnderlying(String underlyingCode_,
+				UnderlyingType underlyingType_, String cursorString_, int maxNumberOfInstrumentsOnPage_) {
+			// TODO: Implement with REST service call 
+			return null;
+		}
+
+		@Override
+		public Instrument[] findInstrumentsByUnderlying(String underlyingCode_, UnderlyingType underlyingType_) {
+			// TODO: Implement with REST service call 
+			return null;
+		}
+
+		@Override
+		public PagedInstrumentList findInstrumentsFromCursorByAssetClass(String assetClassName_, String cursorString_,
+				int maxNumberOfInstrumentsOnPage_) {
+			// TODO: Implement with REST service call 
+			return null;
+		}
+
+		@Override
+		public PagedInstrumentList findAllInstrumentsFromCursor(String cursorString_,
+				int maxNumberOfInstrumentsOnPage_) {
+			// TODO: Implement with REST service call 
+			return null;
+		}
+
+		@Override
+		public Instrument findInstrumentByCode(String instrumentCode_) {
+			// TODO: Implement with REST service call 
+			Instrument instrument = new Instrument();
+			instrument.setInstrumentCode(instrumentCode_); 
+			instrument.setUnderlyingCode("TEST"); 
+			instrument.setUnderlyingType(UnderlyingType.Product);
+			instrument.setContractSize(100); 
+			return instrument;
+		}
+
+		@Override
+		public void deleteInstrument(String instrumentCode_) {
+			// TODO Auto-generated method stub
+			
+		}
+		
 	}
 }

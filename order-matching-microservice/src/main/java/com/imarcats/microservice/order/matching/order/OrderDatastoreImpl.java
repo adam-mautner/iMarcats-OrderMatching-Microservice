@@ -3,7 +3,7 @@ package com.imarcats.microservice.order.matching.order;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.PostConstruct;
@@ -23,7 +23,6 @@ public class OrderDatastoreImpl implements OrderDatastore {
 	private static final List<OrderState> ACTIVE_ORDER_STATES = Arrays.asList(OrderState.PendingSubmit, OrderState.WaitingSubmit, OrderState.Submitted);
 	
 	private HashMap<Long, Order> orders = new HashMap<Long, Order>();
-	private AtomicLong transactionId = new AtomicLong();
 	
 	@Autowired
 	private MarketDatastoreImpl marketDatastore;
@@ -36,13 +35,15 @@ public class OrderDatastoreImpl implements OrderDatastore {
 	@Override
 	public Long createOrder(Order order) {
 		checkReferenceUniqueness(order);
-		long orderIdValue = transactionId.incrementAndGet();
-		order.setKey(orderIdValue);
-		return orders.put(orderIdValue, order).getKey();
+		orders.put(order.getKey(), order);
+		return order.getKey();
 	}
 
 	private void checkReferenceUniqueness(Order order) {
 		if(findOrderBy(order.getExternalOrderReference(), order.getSubmitterID(), order.getTargetMarketCode()) != null) {
+			throw new RuntimeException("Non-Unique external reference: " + order);
+		}
+		if(orders.get(order.getKey()) != null) {
 			throw new RuntimeException("Non-Unique external reference: " + order);
 		}
 	}
@@ -88,7 +89,8 @@ public class OrderDatastoreImpl implements OrderDatastore {
 	
 	@Override
 	public OrderInternal findOrderBy(String externalReference_, String userID_, String marketCode_) {
-		return toOrderInternal(findOrderByUserAndMarket(userID_, marketCode_).filter(order -> order.getExternalOrderReference().equals(externalReference_)).findFirst().get());
+		Optional<Order> first = findOrderByUserAndMarket(userID_, marketCode_).filter(order -> order.getExternalOrderReference().equals(externalReference_)).findFirst();
+		return first.isPresent() ? toOrderInternal(first.get()) : null;
 	}
 
 	private Stream<Order> findOrderByUserAndMarket(String userID_, String marketCode_) {

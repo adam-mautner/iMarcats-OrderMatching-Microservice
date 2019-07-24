@@ -84,7 +84,7 @@ public class KafkaMessageBroker {
 	private void sendPropertyChangeNotification(DatastoreKey observedObject_, Class observedObjectClass_,
 			PropertyChanges propertyChanges) {
 		if(Market.class.equals(observedObjectClass_)) {
-			propertyChangesKafkaTemplate.send(IMARCATS_MARKET_CHANGE, createMarketKey(propertyChanges.getParentObject().getCodeKey()), propertyChanges);
+			propertyChangesKafkaTemplate.send(IMARCATS_MARKET_CHANGE, createMarketKey(propertyChanges.getObjectBeingChanged().getCodeKey()), propertyChanges);
 		} else if(Order.class.equals(observedObjectClass_)) {
 			propertyChangesKafkaTemplate.send(IMARCATS_ORDER_CHANGE, createMarketUserKey(propertyChanges.getParentObject().getCodeKey(), propertyChanges.getObjectOwner()), propertyChanges);
 			propertyChangesKafkaTemplate.send(IMARCATS_ORDER_CHANGE, createMarketKey(propertyChanges.getParentObject().getCodeKey()), propertyChanges);

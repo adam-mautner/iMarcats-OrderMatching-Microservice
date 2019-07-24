@@ -4,8 +4,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 
 import com.imarcats.internal.server.infrastructure.datastore.MarketDatastore;
 import com.imarcats.internal.server.infrastructure.datastore.MatchedTradeDatastore;
@@ -67,10 +65,5 @@ public class OrderManagementSystemFactory {
 				propertyChangeSession,
 				tradeNotificationSession);
 		return context;
-	}
-	
-	public static Pageable createPageable(String cursorString_,
-			int numberOnPage_) {
-		 return PageRequest.of(cursorString_ != null ? Integer.parseInt(cursorString_) : 0, numberOnPage_);
 	}
 }

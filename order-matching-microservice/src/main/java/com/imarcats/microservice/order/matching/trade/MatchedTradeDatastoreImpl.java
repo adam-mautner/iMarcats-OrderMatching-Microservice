@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
@@ -25,7 +26,8 @@ public class MatchedTradeDatastoreImpl implements MatchedTradeDatastore {
 		checkReferenceUniqueness(matchedTrade_.getSellSide());
 		long transactionIdValue = transactionId.incrementAndGet();
 		matchedTrade_.setTransactionID(transactionIdValue);
-		return trades.put(transactionIdValue, matchedTrade_).getTransactionID();
+		trades.put(transactionIdValue, matchedTrade_);
+		return matchedTrade_.getTransactionID();
 	}
 
 	private void checkReferenceUniqueness(TradeSide tradeSide) {
@@ -41,7 +43,8 @@ public class MatchedTradeDatastoreImpl implements MatchedTradeDatastore {
 
 	@Override
 	public TradeSide findMatchedTradeByReferenceUserAndMarket(String externalReference_, String userID_, String marketCode_) {
-		return Arrays.asList(findMatchedTradeByUserAndMarketInternal(userID_, marketCode_)).stream().filter(trade -> trade.getExternalOrderReference().equals(externalReference_)).findFirst().get();
+		Optional<TradeSide> first = Arrays.asList(findMatchedTradeByUserAndMarketInternal(userID_, marketCode_)).stream().filter(trade -> trade.getExternalOrderReference().equals(externalReference_)).findFirst();
+		return first.isPresent() ? first.get() : null;
 	}
 
 	@Override
