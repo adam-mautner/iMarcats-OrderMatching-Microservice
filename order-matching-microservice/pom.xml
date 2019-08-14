@@ -101,6 +101,12 @@
     		<groupId>org.springframework.kafka</groupId>
     		<artifactId>spring-kafka</artifactId>
 		</dependency>
+
+		<!-- Use MongoDB -->		
+		<dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-mongodb</artifactId>
+        </dependency>
 		
 		<dependency>
 			<groupId>com.imarcats.opensource</groupId>
