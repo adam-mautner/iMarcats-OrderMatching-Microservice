@@ -29,8 +29,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.junit4.SpringRunner;
 
+import com.imarcats.microservice.order.matching.Application;
+
 @RunWith(SpringRunner.class)
-@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT, classes= {Application.class})
 @DirtiesContext
 public class HelloWorldConfigurationTests {
 
@@ -44,11 +46,7 @@ public class HelloWorldConfigurationTests {
     public void testGreeting() throws Exception {
         ResponseEntity<String> entity = restTemplate
                 .getForEntity("http://localhost:" + this.port + "/", String.class);
-        assertEquals(HttpStatus.OK, entity.getStatusCode());
-        
-        entity = restTemplate
-                .getForEntity("http://localhost:" + this.port + "/myOrders/adam/", String.class);
-        assertEquals(HttpStatus.OK, entity.getStatusCode());
+        assertEquals(HttpStatus.OK, entity.getStatusCode());        
     }
 
 }

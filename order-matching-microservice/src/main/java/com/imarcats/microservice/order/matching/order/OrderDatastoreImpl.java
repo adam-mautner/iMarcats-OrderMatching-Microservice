@@ -1,6 +1,7 @@
 package com.imarcats.microservice.order.matching.order;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
@@ -121,6 +122,10 @@ public class OrderDatastoreImpl implements OrderDatastore {
 		return createPagedOrderList(findOrderByUserAndMarket(userID_, marketCode_).collect(Collectors.toList()), cursorString_, maxNumberOfOrderOnPage_);
 	}
 
+	public Collection<Order> getAllOrders() {
+		return orders.values();
+	} 
+	
 	private OrderInternal[] toOrderInternalArray(List<Order> orders) {
 		return orders.stream().map(o -> toOrderInternal(o)).toArray(size -> new OrderImpl[size]);
 	}

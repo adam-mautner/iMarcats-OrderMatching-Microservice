@@ -1,5 +1,6 @@
 package com.imarcats.microservice.order.matching;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,7 +24,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.imarcats.internal.server.infrastructure.datastore.MarketDatastore;
-import com.imarcats.internal.server.infrastructure.datastore.OrderDatastore;
 import com.imarcats.internal.server.interfaces.order.OrderInternal;
 import com.imarcats.internal.server.interfaces.order.OrderManagementContext;
 import com.imarcats.market.engine.matching.OrderCancelActionExecutor;
@@ -37,6 +37,7 @@ import com.imarcats.microservice.order.matching.order.CreateSubmittedOrderAction
 import com.imarcats.microservice.order.matching.order.DeleteSubmittedOrderAction;
 import com.imarcats.microservice.order.matching.order.OrderAction;
 import com.imarcats.microservice.order.matching.order.OrderActionMessage;
+import com.imarcats.microservice.order.matching.order.OrderDatastoreImpl;
 import com.imarcats.model.Market;
 import com.imarcats.model.Order;
 import com.imarcats.model.types.PagedMarketList;
@@ -47,6 +48,9 @@ public class ActionExecutor implements ConsumerSeekAware {
 	// We have to set the topic to the one we set up for Kafka Docker - I know,
 	// hardcoded topic - again :)
 	public static final String IMARCATS_ORDER_QUEUE = "imarcats_order_q";
+
+	// TODO: Parameterize also in the listener 
+	private int partition = 0;
 	
 	private int delay 	=  5000;   // delay for 10 sec.
 	private int period 	= 10000;  // repeat every 10 sec.
@@ -76,7 +80,7 @@ public class ActionExecutor implements ConsumerSeekAware {
 
 	@Autowired
 	@Qualifier("OrderDatastoreImpl")
-	protected OrderDatastore orderDatastore;
+	protected OrderDatastoreImpl orderDatastore;
 
 	@Autowired
 	protected OrderManagementContext orderManagementContext;
@@ -89,6 +93,7 @@ public class ActionExecutor implements ConsumerSeekAware {
 
 	@Autowired
 	private OrderQueuePartitionOffsetRepository orderQueuePartitionOffsetRepository;
+
 	
 	@PostConstruct
 	public void postCreate() {
@@ -151,20 +156,16 @@ public class ActionExecutor implements ConsumerSeekAware {
 			
 			synchronized(lock) {				
 				// check offset for partition 
-				if (offsetInitMap.get(partition) != null) {				
-					Integer offsetFromMap = offsetMap.get(partition);
-					if(offsetFromMap != null) {
-						int intendedOffset = offsetFromMap + 1;
-						// check, if we should have already consumed the message 
-						if (intendedOffset > offset) {
-							seekCallBack.get().seek(IMARCATS_ORDER_QUEUE, partition, intendedOffset);
-							return;
-						}
+				Integer offsetFromMap = offsetMap.get(partition);
+				if(offsetFromMap != null) {
+					int intendedOffset = offsetFromMap + 1;
+					// check, if we should have already consumed the message 
+					if (intendedOffset > offset) {						
+						// ignore message 
+						return;
 					}
-					
-					offsetInitMap.put(partition, true); 
 				}
-				
+					
 				processMessage(message);
 				
 				// save the offset for the last successfully processed message 
@@ -243,21 +244,22 @@ public class ActionExecutor implements ConsumerSeekAware {
 			System.out.println("Backup executed");
 			
 			// backup in-memory DBs
-			PagedMarketList marketList = marketDatastore.findAllMarketModelsFromCursor(null, 10_000);
+			PagedMarketList marketList = marketDatastore.findAllMarketModelsFromCursor("0", 10_000);
 			for (Market market : marketList.getMarkets()) {
-				marketRepository.insert(market);			
-				// store orders for market
-				OrderInternal[] orders = orderDatastore.findActiveOrdersOnMarket(market.getMarketCode());
-				for (OrderInternal order : orders) {
-					orderRepository.insert(order.getOrderModel());
-				}
+				marketRepository.save(market);			
+			}
+			
+			// backup orders 
+			Collection<Order> orders = orderDatastore.getAllOrders();
+			for (Order order : orders) {
+				orderRepository.save(order);
 			}
 			
 			// back up Offset Map
 			Set<Integer> partitionSet = offsetMap.keySet();
 			
 			for (Integer partition : partitionSet) {			
-				orderQueuePartitionOffsetRepository.insert(new OrderQueuePartitionOffset(partition, offsetMap.get(partition)));
+				orderQueuePartitionOffsetRepository.save(new OrderQueuePartitionOffset(partition, offsetMap.get(partition)));
 			}
 		}
 	}
@@ -265,6 +267,18 @@ public class ActionExecutor implements ConsumerSeekAware {
 	@Override
 	public void registerSeekCallback(ConsumerSeekCallback callback) {
 		seekCallBack.set(callback);
+		synchronized(lock) {							
+			// check offset for partition 
+			Integer offsetFromMap = offsetMap.get(partition);
+			if(offsetFromMap != null) {
+				int intendedOffset = offsetFromMap + 1;
+			    if (offsetInitMap.get(partition) == null) {
+					// init seek 
+					seekCallBack.get().seek(IMARCATS_ORDER_QUEUE, partition, intendedOffset);
+					offsetInitMap.put(partition, true); 
+				}
+			}				
+		}
 	}
 
 	@Override

@@ -5,6 +5,10 @@ server:
 spring:
   application:
     name: testLatticeApp
+  data:
+    mongodb:
+        host: 10.0.75.1
+        port: 27017
 
 ribbon:
   ServerListRefreshInterval: 1000
